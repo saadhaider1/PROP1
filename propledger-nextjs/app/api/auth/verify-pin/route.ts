@@ -1,19 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import mysql from 'mysql2/promise';
+import { createSupabaseAdminClient } from '@/lib/supabase';
 
 const schema = z.object({
     email: z.string().email(),
     pin: z.string().length(6),
-});
-
-// Get MySQL connection from environment
-const pool = mysql.createPool({
-    host: process.env.MYSQL_HOST || 'localhost',
-    port: parseInt(process.env.MYSQL_PORT || '3306'),
-    user: process.env.MYSQL_USER || 'root',
-    password: process.env.MYSQL_PASSWORD || '',
-    database: process.env.MYSQL_DATABASE || 'propledger_db',
 });
 
 export async function POST(req: Request) {
@@ -21,21 +12,41 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { email, pin } = schema.parse(body);
 
-        // Verify PIN
-        const [rows] = await pool.execute<any[]>(
-            `SELECT * FROM password_resets 
-            WHERE email = ? AND token = ? AND expires_at > CURRENT_TIMESTAMP`,
-            [email, pin]
-        );
+        const supabase = createSupabaseAdminClient();
 
-        if (rows.length === 0) {
-            return NextResponse.json({ valid: false, message: 'Invalid or expired PIN' }, { status: 400 });
+        // Verify PIN exists and not expired
+        const { data, error } = await supabase
+            .from('password_resets')
+            .select('*')
+            .eq('email', email)
+            .eq('token', pin)
+            .gt('expires_at', new Date().toISOString())
+            .single();
+
+        if (error || !data) {
+            console.log('PIN verification failed:', error);
+            return NextResponse.json({
+                valid: false,
+                message: 'Invalid or expired PIN'
+            }, { status: 400 });
         }
 
-        return NextResponse.json({ valid: true, message: 'PIN verified' });
+        return NextResponse.json({
+            valid: true,
+            message: 'PIN verified successfully'
+        });
 
     } catch (error) {
         console.error('Verify PIN error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        if (error instanceof z.ZodError) {
+            return NextResponse.json({
+                valid: false,
+                message: 'Invalid PIN format'
+            }, { status: 400 });
+        }
+        return NextResponse.json({
+            valid: false,
+            message: 'Internal server error'
+        }, { status: 500 });
     }
 }
