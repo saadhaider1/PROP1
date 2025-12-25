@@ -10,8 +10,6 @@ const nextConfig = {
       },
     ],
   },
-  // Ensure proper output for Netlify
-  output: 'standalone',
 }
 
 module.exports = nextConfig
