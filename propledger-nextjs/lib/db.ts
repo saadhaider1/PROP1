@@ -12,6 +12,8 @@ export interface User {
   user_type: 'investor' | 'property_owner' | 'agent' | 'developer'
   newsletter_subscribed: boolean
   wallet_address?: string
+  oauth_provider?: string
+  oauth_id?: string
   created_at: string
   updated_at: string
   is_active: boolean
