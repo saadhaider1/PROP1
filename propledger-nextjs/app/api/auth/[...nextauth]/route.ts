@@ -22,6 +22,8 @@ declare module 'next-auth' {
   }
   interface User {
     id?: string;
+    oauth_provider?: string;
+    oauth_id?: string;
   }
 }
 
