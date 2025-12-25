@@ -3,31 +3,46 @@ import { db } from '@/lib/db';
 
 export async function GET() {
   try {
-    // Try PHP backend first (for XAMPP compatibility)
+    // Use Supabase/PostgreSQL as primary source
+    try {
+      const agents = await db.getAgents();
+
+      return NextResponse.json({
+        success: true,
+        agents,
+        count: agents.length,
+        source: 'supabase',
+      });
+    } catch (supabaseError) {
+      console.log('Supabase not available, trying PHP backend...', supabaseError);
+    }
+
+    // Fallback to PHP backend (for legacy compatibility)
     try {
       const phpResponse = await fetch('http://localhost/PROPLEDGER/managers/get_agents.php');
       const phpData = await phpResponse.json();
-      
+
       if (phpData.success && phpData.agents) {
         return NextResponse.json({
           success: true,
           agents: phpData.agents,
           count: phpData.agents.length,
+          source: 'php',
         });
       }
     } catch (phpError) {
-      console.log('PHP backend not available, trying PostgreSQL...', phpError);
+      console.log('PHP backend also not available', phpError);
     }
-    
-    // Fallback to PostgreSQL
-    const agents = await db.getAgents();
-    
+
+    // If both fail, return empty array
     return NextResponse.json({
       success: true,
-      agents,
-      count: agents.length,
+      agents: [],
+      count: 0,
+      source: 'none',
+      message: 'No data source available',
     });
-    
+
   } catch (error) {
     console.error('Get agents error:', error);
     return NextResponse.json(

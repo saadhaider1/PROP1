@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import SessionProviderWrapper from '@/components/SessionProviderWrapper';
 
+import { WalletProvider } from '@/context/WalletContext';
+
 export const metadata: Metadata = {
   title: 'PROPLEDGER - CDA-Compliant Blockchain Real Estate Platform',
   description: 'CDA-Compliant Blockchain Real Estate Platform. Invest in tokenized real estate properties with blockchain security and CDA-Compliant standards',
@@ -16,7 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <SessionProviderWrapper>{children}</SessionProviderWrapper>
+        <SessionProviderWrapper>
+          <WalletProvider>
+            {children}
+          </WalletProvider>
+        </SessionProviderWrapper>
       </body>
     </html>
   );

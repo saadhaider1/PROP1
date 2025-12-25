@@ -1,199 +1,198 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import PropertyCard from '@/components/PropertyCard';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import Sidebar from '@/components/Sidebar';
+
+interface Property {
+  id: number;
+  title: string;
+  description?: string;
+  location: string;
+  price: number;
+  token_price: number;
+  total_tokens: number;
+  available_tokens: number;
+  property_type: string;
+  image_url?: string;
+}
 
 export default function PropertiesPage() {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sample property data - Replace with API call
-  const properties = [
-    {
-      id: '1',
-      image: '/images/property1.jpg',
-      logo: '/images/logo1.png',
-      title: 'Property Share',
-      category: 'Real Estate Ownership Made Easy',
-      location: 'Arif Habib Dolmen REIT Management Limited',
-      description: 'It is an innovative, bite-sized way to invest in high-value real estate. With Dolmen REIT, you can own a share of the most sought-after commercial properties without needing millions upfront.',
-      price: 'PKR 25,000,000',
-      type: 'property' as const
-    },
-    {
-      id: '2',
-      image: '/images/property2.jpg',
-      logo: '/images/logo2.png',
-      title: 'Serene Heights Hotel & Resort',
-      category: 'Hospitality',
-      location: 'Nathia Gali, Khyber Pakhtunkhwa',
-      description: 'Serene Heights in Nathia Gali is a luxury hotel and resort spanning 2.5 acres with 50 rooms, a spa, restaurant, and conference facilities. Located in a prime tourist destination.',
-      price: 'PKR 45,000,000',
-      type: 'property' as const
-    },
-    {
-      id: '3',
-      image: '/images/property3.jpg',
-      title: 'Blue World City',
-      category: 'Residential Development',
-      location: 'Islamabad Highway, Rawalpindi',
-      description: 'A modern residential project offering affordable housing solutions with world-class amenities including parks, shopping centers, and educational institutions.',
-      price: 'PKR 15,000,000',
-      type: 'property' as const
-    },
-    {
-      id: '4',
-      image: '/images/property4.jpg',
-      title: 'Capital Smart City',
-      category: 'Smart City Development',
-      location: 'Islamabad-Lahore Motorway',
-      description: 'Pakistan\'s first smart city project featuring eco-friendly infrastructure, smart homes, and sustainable living solutions with modern facilities.',
-      price: 'PKR 35,000,000',
-      type: 'property' as const
-    },
-    {
-      id: '5',
-      image: '/images/property5.jpg',
-      title: 'DHA Phase 8',
-      category: 'Premium Residential',
-      location: 'DHA Lahore',
-      description: 'Exclusive residential plots in DHA Phase 8 offering premium lifestyle with state-of-the-art amenities, security, and infrastructure.',
-      price: 'PKR 55,000,000',
-      type: 'property' as const
-    },
-    {
-      id: '6',
-      image: '/images/property6.jpg',
-      title: 'Bahria Town Karachi',
-      category: 'Gated Community',
-      location: 'Karachi',
-      description: 'Luxurious gated community offering residential and commercial properties with world-class amenities including golf courses, theme parks, and shopping malls.',
-      price: 'PKR 28,000,000',
-      type: 'property' as const
-    },
-    {
-      id: '7',
-      image: '/images/beachfront.jpg',
-      icon: '🏖️',
-      title: 'Beachfront Cottage',
-      category: 'Vacation Rental Investment',
-      location: 'Coastal Area, Karachi',
-      description: 'Charming 2-bedroom cottage with ocean views. Perfect vacation rental investment opportunity.',
-      price: 'PKR 675,000',
-      type: 'property' as const
-    },
-    {
-      id: '8',
-      image: '/images/victorian.jpg',
-      icon: '🏛️',
-      title: 'Historic Victorian Home',
-      category: 'Heritage Property',
-      location: 'Civil Lines, Karachi',
-      description: 'Restored Victorian mansion with original features. Unique investment with heritage value.',
-      price: 'PKR 1,250,000',
-      type: 'property' as const
-    },
-    {
-      id: '9',
-      image: '/images/smarthome.jpg',
-      icon: '🏡',
-      title: 'Smart Home - Tech District',
-      category: 'Modern Smart Home',
-      location: 'IT Park, Islamabad',
-      description: 'Ultra-modern smart home with automated systems. Perfect for tech-savvy tenants.',
-      price: 'PKR 925,000',
-      type: 'property' as const
-    }
-  ];
+  // Fetch properties from API
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/properties');
+        const data = await response.json();
 
-  const filteredProperties = properties.filter(property => {
+        if (data.success) {
+          setProperties(data.properties);
+        } else {
+          setError(data.message || 'Failed to load properties');
+        }
+      } catch (err) {
+        console.error('Error fetching properties:', err);
+        setError('Failed to load properties. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProperties();
+  }, []);
+
+  // Transform properties to match PropertyCard format
+  const transformedProperties = properties.map(prop => ({
+    id: prop.id.toString(),
+    image: prop.image_url || '/images/property-placeholder.jpg',
+    title: prop.title,
+    category: prop.property_type,
+    location: prop.location,
+    description: prop.description || '',
+    price: `PKR ${prop.price.toLocaleString()}`,
+    type: 'property' as const
+  }));
+
+  const filteredProperties = transformedProperties.filter(property => {
     const matchesSearch = property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         property.location.toLowerCase().includes(searchQuery.toLowerCase());
+      property.location.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filter === 'all' || property.category.toLowerCase().includes(filter.toLowerCase());
     return matchesSearch && matchesFilter;
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-slate-100 to-gray-100">
+    <div className="min-h-screen bg-[#F0F4F8] font-sans">
       <Navbar />
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-teal-900 text-white py-20 shadow-xl">
+      <Sidebar />
+
+      {/* Hero Section - Clean Light Style */}
+      <div className="bg-white border-b border-gray-100 pt-12 pb-16">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 drop-shadow-2xl">Explore Properties</h1>
-          <p className="text-lg text-white/90 max-w-3xl mx-auto leading-relaxed drop-shadow-md">Discover premium real estate investment opportunities</p>
+          <div className="inline-block p-3 rounded-full bg-blue-50 mb-6">
+            <span className="text-3xl">🏗️</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+            Explore <span className="text-blue-600">Properties</span>
+          </h1>
+          <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
+            Discover premium real estate investment opportunities vetted for compliance and growth potential.
+          </p>
         </div>
       </div>
 
-      {/* Content Section with Light Background */}
-      <div className="bg-gradient-to-b from-gray-50 via-slate-100 to-gray-100 relative">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMwMDAwMDAiIGZpbGwtb3BhY2l0eT0iMC4wMiI+PHBhdGggZD0iTTM2IDE0YzMuMzEgMCA2LTIuNjkgNi02cy0yLjY5LTYtNi02LTYgMi42OS02IDYgMi42OSA2IDYgNnptMC0xMGMyLjIxIDAgNCAxLjc5IDQgNHMtMS43OSA0LTQgNC00LTEuNzktNC00IDEuNzktNCA0LTR6TTYgMzRjMy4zMSAwIDYtMi42OSA2LTZzLTIuNjktNi02LTYtNiAyLjY5LTYgNiAyLjY5IDYgNiA2em0wLTEwYzIuMjEgMCA0IDEuNzkgNCA0cy0xLjc5IDQtNCA0LTQtMS43OS00LTQgMS43OS00IDQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-50"></div>
-        <div className="container mx-auto px-4 py-8 relative z-10">
-        <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-300 p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="container mx-auto px-4 py-12">
+        {/* Search & Filter Bar */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-12 transform -translate-y-20 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Search */}
             <div>
-              <input
-                type="text"
-                placeholder="Search properties by name or location..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search Properties</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Search by name, location, or amenities..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all"
+                />
+              </div>
             </div>
 
             {/* Filter */}
             <div>
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Categories</option>
-                <option value="residential">Residential</option>
-                <option value="commercial">Commercial</option>
-                <option value="hospitality">Hospitality</option>
-                <option value="development">Development</option>
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Category Filter</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">📂</span>
+                <select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 appearance-none transition-all cursor-pointer"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="residential">Residential</option>
+                  <option value="commercial">Commercial</option>
+                  <option value="hospitality">Hospitality</option>
+                  <option value="development">Development</option>
+                </select>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">▼</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-300 p-6 text-center hover:shadow-xl transition-all">
-            <p className="text-3xl font-bold text-teal-600">{properties.length}</p>
-            <p className="text-gray-600">Total Properties</p>
+        {/* Stats Grid - Clean Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12 -mt-8">
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center">
+            <p className="text-3xl font-bold text-gray-900 mb-1">{properties.length}</p>
+            <p className="text-gray-500 text-sm font-medium">Total Properties</p>
           </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-300 p-6 text-center hover:shadow-xl transition-all">
-            <p className="text-3xl font-bold text-blue-600">PKR 2.5B+</p>
-            <p className="text-gray-600">Total Value</p>
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center">
+            <p className="text-3xl font-bold text-blue-600 mb-1">2.5B+</p>
+            <p className="text-gray-500 text-sm font-medium">Total Value (PKR)</p>
           </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-300 p-6 text-center hover:shadow-xl transition-all">
-            <p className="text-3xl font-bold text-teal-600">15+</p>
-            <p className="text-gray-600">Locations</p>
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center">
+            <p className="text-3xl font-bold text-gray-900 mb-1">15+</p>
+            <p className="text-gray-500 text-sm font-medium">Prime Locations</p>
           </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-300 p-6 text-center hover:shadow-xl transition-all">
-            <p className="text-3xl font-bold text-blue-600">100%</p>
-            <p className="text-gray-600">CDA Approved</p>
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center">
+            <p className="text-3xl font-bold text-green-600 mb-1">100%</p>
+            <p className="text-gray-500 text-sm font-medium">CDA Compliant</p>
           </div>
         </div>
 
-        {/* Properties Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredProperties.map((property) => (
-            <PropertyCard key={property.id} {...property} />
-          ))}
-        </div>
-
-        {/* No Results */}
-        {filteredProperties.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-xl">No properties found matching your criteria.</p>
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-20">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-gray-600">Loading properties...</p>
           </div>
         )}
-        </div>
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="text-center py-20 bg-red-50 rounded-3xl border border-red-100">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Error Loading Properties</h3>
+            <p className="text-gray-600">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Properties Grid */}
+        {!loading && !error && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredProperties.map((property) => (
+                <PropertyCard key={property.id} {...property} />
+              ))}
+            </div>
+
+            {/* No Results */}
+            {filteredProperties.length === 0 && (
+              <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
+                <div className="text-6xl mb-4 text-gray-200">🔍</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No properties found</h3>
+                <p className="text-gray-500">Try adjusting your search filters to find what you're looking for.</p>
+              </div>
+            )}
+          </>
+        )}
       </div>
       <Footer />
     </div>

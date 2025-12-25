@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import PropertyCard from '@/components/PropertyCard';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import Sidebar from '@/components/Sidebar';
 
 export default function CrowdfundingPage() {
   const [filter, setFilter] = useState('all');
@@ -95,99 +97,122 @@ export default function CrowdfundingPage() {
 
   const filteredCampaigns = campaigns.filter(campaign => {
     const matchesSearch = campaign.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         campaign.location.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filter === 'all' || 
-                         (filter === 'active' && parseFloat(campaign.raisedAmount.replace(/[^0-9.]/g, '')) < parseFloat(campaign.targetAmount.replace(/[^0-9.]/g, ''))) ||
-                         (filter === 'completed' && parseFloat(campaign.raisedAmount.replace(/[^0-9.]/g, '')) >= parseFloat(campaign.targetAmount.replace(/[^0-9.]/g, '')));
+      campaign.location.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filter === 'all' ||
+      (filter === 'active' && parseFloat(campaign.raisedAmount.replace(/[^0-9.]/g, '')) < parseFloat(campaign.targetAmount.replace(/[^0-9.]/g, ''))) ||
+      (filter === 'completed' && parseFloat(campaign.raisedAmount.replace(/[^0-9.]/g, '')) >= parseFloat(campaign.targetAmount.replace(/[^0-9.]/g, '')));
     return matchesSearch && matchesFilter;
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-slate-100 to-gray-100">
+    <div className="min-h-screen bg-[#F0F4F8] font-sans">
       <Navbar />
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-teal-900 text-white py-20 shadow-xl">
+      <Sidebar />
+
+      {/* Hero Section - Clean Light Style */}
+      <div className="bg-white border-b border-gray-100 pt-12 pb-16">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 drop-shadow-lg">Crowdfunding Campaigns</h1>
-          <p className="text-lg text-white/90 max-w-3xl mx-auto leading-relaxed drop-shadow-md">Join community-funded real estate projects</p>
+          <div className="inline-block p-3 rounded-full bg-blue-50 mb-6">
+            <span className="text-3xl">🧩</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+            Crowdfunding <span className="text-blue-600">Campaigns</span>
+          </h1>
+          <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
+            Join community-funded real estate projects and own a share of premium properties with smaller investments.
+          </p>
         </div>
       </div>
 
-      {/* Content Section with Light Background */}
-      <div className="bg-gradient-to-b from-gray-50 via-slate-100 to-gray-100 relative">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMwMDAwMDAiIGZpbGwtb3BhY2l0eT0iMC4wMiI+PHBhdGggZD0iTTM2IDE0YzMuMzEgMCA2LTIuNjkgNi02cy0yLjY5LTYtNi02LTYgMi42OS02IDYgMi42OSA2IDYgNnptMC0xMGMyLjIxIDAgNCAxLjc5IDQgNHMtMS43OSA0LTQgNC00LTEuNzktNC00IDEuNzktNCA0LTR6TTYgMzRjMy4zMSAwIDYtMi42OSA2LTZzLTIuNjktNi02LTYtNiAyLjY5LTYgNiAyLjY5IDYgNiA2em0wLTEwYzIuMjEgMCA0IDEuNzkgNCA0cy0xLjc5IDQtNCA0LTQtMS43OS00LTQgMS43OS00IDQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-50"></div>
-        <div className="container mx-auto px-4 py-8 relative z-10">
-        <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-300 p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="container mx-auto px-4 py-12">
+        {/* Search & Filter Bar */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-12 transform -translate-y-20 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Search */}
             <div>
-              <input
-                type="text"
-                placeholder="Search campaigns by name or location..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search Campaigns</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Search by name or location..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all"
+                />
+              </div>
             </div>
 
             {/* Filter */}
             <div>
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                <option value="all">All Campaigns</option>
-                <option value="active">Active Campaigns</option>
-                <option value="completed">Fully Funded</option>
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Campaign Status</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">📊</span>
+                <select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 appearance-none transition-all cursor-pointer"
+                >
+                  <option value="all">All Campaigns</option>
+                  <option value="active">Active Campaigns</option>
+                  <option value="completed">Fully Funded</option>
+                </select>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">▼</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-300 p-6 text-center hover:shadow-xl transition-all">
-            <p className="text-3xl font-bold text-teal-600">{campaigns.length}</p>
-            <p className="text-gray-600">Active Campaigns</p>
+        {/* Stats Grid - Clean Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12 -mt-8">
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center">
+            <p className="text-3xl font-bold text-gray-900 mb-1">{campaigns.length}</p>
+            <p className="text-gray-500 text-sm font-medium">Active Campaigns</p>
           </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-300 p-6 text-center hover:shadow-xl transition-all">
-            <p className="text-3xl font-bold text-blue-600">PKR 1.2B</p>
-            <p className="text-gray-600">Total Funded</p>
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center">
+            <p className="text-3xl font-bold text-blue-600 mb-1">1.2B+</p>
+            <p className="text-gray-500 text-sm font-medium">Total Funded (PKR)</p>
           </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-300 p-6 text-center hover:shadow-xl transition-all">
-            <p className="text-3xl font-bold text-teal-600">3,500+</p>
-            <p className="text-gray-600">Investors</p>
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center">
+            <p className="text-3xl font-bold text-gray-900 mb-1">3.5k+</p>
+            <p className="text-gray-500 text-sm font-medium">Active Investors</p>
           </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-lg shadow-lg border border-gray-300 p-6 text-center hover:shadow-xl transition-all">
-            <p className="text-3xl font-bold text-blue-600">PKR 50K</p>
-            <p className="text-gray-600">Min. Contribution</p>
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center">
+            <p className="text-3xl font-bold text-green-600 mb-1">50K</p>
+            <p className="text-gray-500 text-sm font-medium">Min. Contribution</p>
           </div>
         </div>
 
-        {/* How It Works */}
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-8 mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">How Crowdfunding Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="bg-green-600 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div>
-              <h3 className="font-semibold text-lg mb-2">Browse Projects</h3>
-              <p className="text-gray-600 text-sm">Explore verified real estate projects</p>
+        {/* How It Works - Clean Style */}
+        <div className="bg-white rounded-3xl p-8 mb-12 border border-gray-100 shadow-sm">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">How Crowdfunding Works</h2>
+            <p className="text-gray-500">Simple steps to start your real estate journey</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
+            {/* Process Line */}
+            <div className="hidden md:block absolute top-8 left-[12%] right-[12%] h-0.5 bg-gray-100 -z-10"></div>
+
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-xl font-bold text-blue-600 mx-auto mb-4 border-4 border-white shadow-sm group-hover:scale-110 transition-transform">1</div>
+              <h3 className="font-bold text-gray-900 mb-1">Browse Projects</h3>
+              <p className="text-sm text-gray-500">Explore verified campaigns</p>
             </div>
-            <div className="text-center">
-              <div className="bg-blue-600 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div>
-              <h3 className="font-semibold text-lg mb-2">Choose Investment</h3>
-              <p className="text-gray-600 text-sm">Select amount and review details</p>
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-xl font-bold text-blue-600 mx-auto mb-4 border-4 border-white shadow-sm group-hover:scale-110 transition-transform">2</div>
+              <h3 className="font-bold text-gray-900 mb-1">Choose Investment</h3>
+              <p className="text-sm text-gray-500">Select amount & review</p>
             </div>
-            <div className="text-center">
-              <div className="bg-purple-600 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div>
-              <h3 className="font-semibold text-lg mb-2">Secure Payment</h3>
-              <p className="text-gray-600 text-sm">Complete transaction via blockchain</p>
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-xl font-bold text-blue-600 mx-auto mb-4 border-4 border-white shadow-sm group-hover:scale-110 transition-transform">3</div>
+              <h3 className="font-bold text-gray-900 mb-1">Secure Payment</h3>
+              <p className="text-sm text-gray-500">Blockchain transaction</p>
             </div>
-            <div className="text-center">
-              <div className="bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">4</div>
-              <h3 className="font-semibold text-lg mb-2">Earn Returns</h3>
-              <p className="text-gray-600 text-sm">Receive profits from your investment</p>
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-xl font-bold text-green-600 mx-auto mb-4 border-4 border-white shadow-sm group-hover:scale-110 transition-transform">4</div>
+              <h3 className="font-bold text-gray-900 mb-1">Earn Returns</h3>
+              <p className="text-sm text-gray-500">Receive regular profits</p>
             </div>
           </div>
         </div>
@@ -201,11 +226,12 @@ export default function CrowdfundingPage() {
 
         {/* No Results */}
         {filteredCampaigns.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-xl">No campaigns found matching your criteria.</p>
+          <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
+            <div className="text-6xl mb-4 text-gray-200">🔍</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">No campaigns found</h3>
+            <p className="text-gray-500">Try changing your filters to see more results.</p>
           </div>
         )}
-        </div>
       </div>
       <Footer />
     </div>

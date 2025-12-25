@@ -134,16 +134,7 @@ export default function Navbar({ user: propUser }: NavbarProps) {
           <div className="flex items-center gap-3">
             {user ? (
               <>
-                {/* Only show Buy Tokens for non-agent users */}
-                {user.type !== 'agent' && (
-                  <Link
-                    href="/buy-tokens"
-                    className="px-4 py-2 bg-gradient-to-r from-teal-400 to-blue-500 text-white rounded-lg hover:from-teal-500 hover:to-blue-600 transition-all text-sm font-semibold shadow-lg flex items-center gap-2"
-                  >
-                    <span>🪙</span>
-                    Buy Tokens
-                  </Link>
-                )}
+
                 <Link
                   href={user.type === 'agent' ? '/agent-dashboard' : '/dashboard'}
                   className="px-4 py-2 bg-white/10 backdrop-blur-sm text-white rounded-lg hover:bg-white/20 transition-all text-sm font-medium border border-white/20 shadow-lg"

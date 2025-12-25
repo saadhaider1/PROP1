@@ -1,94 +1,89 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { verifyPassword, createSession } from '@/lib/auth';
-import { z } from 'zod';
-
-const loginSchema = z.object({
-  email: z.string().email('Invalid email format'),
-  password: z.string().min(1, 'Password is required'),
-  loginType: z.enum(['user', 'agent']).optional(),
-  remember: z.boolean().optional(),
-});
+import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseAdminClient } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    
-    // Validate input
-    const validatedData = loginSchema.parse(body);
-    
-    // Find user by email
-    const user = await db.getUserByEmail(validatedData.email);
-    
-    if (!user) {
+    const { email, password, loginType } = await request.json()
+
+    if (!email || !password) {
       return NextResponse.json(
-        { success: false, message: 'Invalid email or password. Please check your credentials or sign up for a new account.' },
+        { success: false, message: 'Email and password are required' },
         { status: 400 }
-      );
+      )
     }
-    
-    if (!user.is_active) {
+
+    const supabase = createSupabaseAdminClient()
+
+    // Sign in with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (authError || !authData.user) {
       return NextResponse.json(
-        { success: false, message: 'Account is deactivated. Please contact support.' },
-        { status: 400 }
-      );
+        { success: false, message: 'Invalid email or password. Please try again.' },
+        { status: 401 }
+      )
     }
-    
-    // Verify password
-    const isValidPassword = await verifyPassword(validatedData.password, user.password_hash);
-    
-    if (!isValidPassword) {
+
+    // Get user profile from public.users table
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single()
+
+    if (profileError || !userProfile) {
       return NextResponse.json(
-        { success: false, message: 'Invalid email or password. Please check your credentials.' },
-        { status: 400 }
-      );
+        { success: false, message: 'User profile not found' },
+        { status: 404 }
+      )
     }
-    
-    // Check if login type matches user type
-    if (validatedData.loginType) {
-      if (validatedData.loginType === 'agent' && user.user_type !== 'agent') {
+
+    // Check if user is an agent (for agent login)
+    if (loginType === 'agent') {
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('*')
+        .eq('user_id', authData.user.id)
+        .single()
+
+      if (!agentData) {
         return NextResponse.json(
-          { success: false, message: 'This account is not registered as an agent. Please use User Login.' },
-          { status: 400 }
-        );
+          { success: false, message: 'Agent account not found' },
+          { status: 403 }
+        )
       }
-      if (validatedData.loginType === 'user' && user.user_type === 'agent') {
-        return NextResponse.json(
-          { success: false, message: 'This is an agent account. Please use Agent Login.' },
-          { status: 400 }
-        );
-      }
+
+      return NextResponse.json({
+        success: true,
+        user: {
+          id: userProfile.id,
+          email: userProfile.email,
+          full_name: userProfile.full_name,
+          user_type: 'agent',
+        },
+        redirect: '/agent-dashboard',
+      })
     }
-    
-    // Create session
-    await createSession(user);
-    
+
+    // Regular user login
     return NextResponse.json({
       success: true,
-      message: 'Login successful!',
       user: {
-        id: user.id,
-        name: user.full_name,
-        full_name: user.full_name,
-        email: user.email,
-        type: user.user_type,
-        user_type: user.user_type,
+        id: userProfile.id,
+        email: userProfile.email,
+        full_name: userProfile.full_name,
+        user_type: userProfile.user_type,
       },
-      redirect: user.user_type === 'agent' ? '/agent-dashboard' : '/dashboard',
-    });
-    
+      redirect: '/dashboard',
+    })
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, message: error.errors[0].message },
-        { status: 400 }
-      );
-    }
-    
-    console.error('Login error:', error);
+    console.error('Login error:', error)
     return NextResponse.json(
-      { success: false, message: 'An error occurred during login. Please try again.' },
+      { success: false, message: 'An error occurred during login' },
       { status: 500 }
-    );
+    )
   }
 }

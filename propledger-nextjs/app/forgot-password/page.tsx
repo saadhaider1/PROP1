@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Navbar from '@/components/Navbar';
 
 export default function ForgotPasswordPage() {
     const router = useRouter();
@@ -95,142 +96,162 @@ export default function ForgotPasswordPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
-                <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                        {step === 1 && 'Forgot Password'}
-                        {step === 2 && 'Verify PIN'}
-                        {step === 3 && 'Reset Password'}
-                    </h2>
-                    <p className="mt-2 text-center text-sm text-gray-600">
-                        {step === 1 && 'Enter your email to receive a verification PIN'}
-                        {step === 2 && `Enter the 6-digit PIN sent to ${email}`}
-                        {step === 3 && 'Create a new password for your account'}
-                    </p>
+        <div className="min-h-screen relative overflow-hidden">
+            {/* Background Image */}
+            <div
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                style={{
+                    backgroundImage: 'url(/images/login-bg.png)',
+                    filter: 'brightness(0.7)',
+                }}
+            />
+
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-900/50 via-slate-800/50 to-slate-900/50" />
+
+            {/* Navbar */}
+            <div className="relative z-10">
+                <Navbar />
+            </div>
+
+            <div className="container mx-auto px-4 py-16 relative z-10 min-h-screen flex items-center justify-center">
+                <div className="w-full max-w-md">
+                    {/* Glassmorphic Form Container */}
+                    <div className="glass-card-light rounded-3xl p-8 shadow-2xl animate-scale-in">
+                        {/* Header */}
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                                {step === 1 && 'Forgot Password'}
+                                {step === 2 && 'Verify PIN'}
+                                {step === 3 && 'Reset Password'}
+                            </h1>
+                            <p className="text-gray-600 text-sm">
+                                {step === 1 && 'Enter your email to receive a verification PIN'}
+                                {step === 2 && `Enter the 6-digit PIN sent to ${email}`}
+                                {step === 3 && 'Create a new password for your account'}
+                            </p>
+                        </div>
+
+                        {/* Error Message */}
+                        {error && (
+                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                                {error}
+                            </div>
+                        )}
+
+                        {/* Success Message */}
+                        {message && (
+                            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-green-600 text-sm">
+                                {message}
+                            </div>
+                        )}
+
+                        {/* Step 1: Email */}
+                        {step === 1 && (
+                            <form className="space-y-5" onSubmit={handleRequestPin}>
+                                <div>
+                                    <label htmlFor="email" className="block text-gray-700 mb-2 font-medium text-sm">
+                                        Email Address
+                                    </label>
+                                    <input
+                                        id="email"
+                                        name="email"
+                                        type="email"
+                                        required
+                                        className="w-full px-4 py-3 glass-input rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all"
+                                        placeholder="your@email.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full py-3.5 px-4 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                                >
+                                    {loading ? 'Sending...' : 'Send PIN'}
+                                </button>
+                                <div className="text-center">
+                                    <Link href="/login" className="text-sm text-gray-700 hover:text-gray-900 font-medium transition-colors">
+                                        Back to Login
+                                    </Link>
+                                </div>
+                            </form>
+                        )}
+
+                        {/* Step 2: PIN Verification */}
+                        {step === 2 && (
+                            <form className="space-y-5" onSubmit={handleVerifyPin}>
+                                <div>
+                                    <label htmlFor="pin" className="block text-gray-700 mb-2 font-medium text-sm">
+                                        Enter PIN
+                                    </label>
+                                    <input
+                                        id="pin"
+                                        name="pin"
+                                        type="text"
+                                        required
+                                        maxLength={6}
+                                        className="w-full px-4 py-3 glass-input rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all text-center tracking-widest text-2xl"
+                                        placeholder="000000"
+                                        value={pin}
+                                        onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full py-3.5 px-4 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                                >
+                                    {loading ? 'Verifying...' : 'Verify PIN'}
+                                </button>
+                            </form>
+                        )}
+
+                        {/* Step 3: New Password */}
+                        {step === 3 && (
+                            <form className="space-y-5" onSubmit={handleResetPassword}>
+                                <div>
+                                    <label htmlFor="new-password" className="block text-gray-700 mb-2 font-medium text-sm">
+                                        New Password
+                                    </label>
+                                    <input
+                                        id="new-password"
+                                        name="new-password"
+                                        type="password"
+                                        required
+                                        className="w-full px-4 py-3 glass-input rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all"
+                                        placeholder="••••••••"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="confirm-password" className="block text-gray-700 mb-2 font-medium text-sm">
+                                        Confirm Password
+                                    </label>
+                                    <input
+                                        id="confirm-password"
+                                        name="confirm-password"
+                                        type="password"
+                                        required
+                                        className="w-full px-4 py-3 glass-input rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all"
+                                        placeholder="••••••••"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full py-3.5 px-4 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                                >
+                                    {loading ? 'Resetting...' : 'Reset Password'}
+                                </button>
+                            </form>
+                        )}
+                    </div>
                 </div>
-
-                {error && (
-                    <div className="bg-red-50 border-l-4 border-red-400 p-4">
-                        <div className="flex">
-                            <div className="ml-3">
-                                <p className="text-sm text-red-700">{error}</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {message && (
-                    <div className="bg-green-50 border-l-4 border-green-400 p-4">
-                        <div className="flex">
-                            <div className="ml-3">
-                                <p className="text-sm text-green-700">{message}</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {step === 1 && (
-                    <form className="mt-8 space-y-6" onSubmit={handleRequestPin}>
-                        <div>
-                            <label htmlFor="email" className="sr-only">Email address</label>
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                required
-                                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
-                                placeholder="Email address"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50"
-                            >
-                                {loading ? 'Sending...' : 'Send PIN'}
-                            </button>
-                        </div>
-                        <div className="text-center">
-                            <Link href="/login" className="font-medium text-teal-600 hover:text-teal-500">
-                                Back to Login
-                            </Link>
-                        </div>
-                    </form>
-                )}
-
-                {step === 2 && (
-                    <form className="mt-8 space-y-6" onSubmit={handleVerifyPin}>
-                        <div>
-                            <label htmlFor="pin" className="sr-only">Enter PIN</label>
-                            <input
-                                id="pin"
-                                name="pin"
-                                type="text"
-                                required
-                                maxLength={6}
-                                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm text-center tracking-widest text-2xl"
-                                placeholder="000000"
-                                value={pin}
-                                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                            />
-                        </div>
-                        <div>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50"
-                            >
-                                {loading ? 'Verifying...' : 'Verify PIN'}
-                            </button>
-                        </div>
-                    </form>
-                )}
-
-                {step === 3 && (
-                    <form className="mt-8 space-y-6" onSubmit={handleResetPassword}>
-                        <div className="rounded-md shadow-sm -space-y-px">
-                            <div>
-                                <label htmlFor="new-password" class="sr-only">New Password</label>
-                                <input
-                                    id="new-password"
-                                    name="new-password"
-                                    type="password"
-                                    required
-                                    className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
-                                    placeholder="New Password"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="confirm-password" class="sr-only">Confirm Password</label>
-                                <input
-                                    id="confirm-password"
-                                    name="confirm-password"
-                                    type="password"
-                                    required
-                                    className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
-                                    placeholder="Confirm New Password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50"
-                            >
-                                {loading ? 'Resetting...' : 'Reset Password'}
-                            </button>
-                        </div>
-                    </form>
-                )}
             </div>
         </div>
     );

@@ -47,6 +47,7 @@ export default function MessageModal({ isOpen, onClose, agent, user }: MessageMo
         message: formData.message,
         priority: formData.priority,
         agent_id: agent.userId ?? agent.id,
+        user_id: user.id.toString(), // Include user_id for localStorage auth
       };
 
       console.log('Sending message to agent:', payload);
@@ -181,8 +182,8 @@ export default function MessageModal({ isOpen, onClose, agent, user }: MessageMo
               type="submit"
               disabled={loading || success}
               className={`flex-1 py-3 rounded-lg font-medium transition-all ${loading || success
-                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 text-white shadow-lg'
+                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 text-white shadow-lg'
                 }`}
             >
               {loading ? 'Sending...' : success ? 'Sent!' : 'Send Message'}

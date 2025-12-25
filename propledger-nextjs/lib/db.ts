@@ -1,406 +1,680 @@
-import mysql from 'mysql2/promise';
+import { createSupabaseAdminClient } from './supabase'
 
-// MySQL connection pool configuration
-const pool = mysql.createPool({
-  host: process.env.MYSQL_HOST || 'localhost',
-  port: parseInt(process.env.MYSQL_PORT || '3306'),
-  user: process.env.MYSQL_USER || 'root',
-  password: process.env.MYSQL_PASSWORD || '',
-  database: process.env.MYSQL_DATABASE || 'propledger_db',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  charset: 'utf8mb4',
-});
+// Get Supabase admin client for database operations
+const getSupabase = () => createSupabaseAdminClient()
 
 export interface User {
-  id: number;
-  full_name: string;
-  email: string;
-  phone: string;
-  country: string;
-  user_type: 'investor' | 'property_owner' | 'agent' | 'developer';
-  password_hash: string;
-  newsletter_subscribed: boolean;
-  wallet_address?: string;
-  oauth_provider?: string;
-  oauth_id?: string;
-  profile_picture_url?: string;
-  email_verified?: boolean;
-  created_at: Date;
-  updated_at: Date;
-  is_active: boolean;
+  id: string
+  full_name: string
+  email: string
+  phone: string
+  country: string
+  user_type: 'investor' | 'property_owner' | 'agent' | 'developer'
+  newsletter_subscribed: boolean
+  wallet_address?: string
+  created_at: string
+  updated_at: string
+  is_active: boolean
 }
 
 export interface Agent {
-  id: number;
-  user_id: number;
-  license_number: string;
-  experience: string;
-  specialization: string;
-  city: string;
-  agency?: string;
-  phone: string;
-  status: 'pending' | 'approved' | 'rejected';
-  commission_rate?: number;
-  total_sales?: number;
-  rating?: number;
-  created_at: Date;
-  full_name?: string;
-  email?: string;
+  id: number
+  user_id: string
+  license_number: string
+  experience: string
+  specialization: string
+  city: string
+  agency?: string
+  phone: string
+  status: 'pending' | 'approved' | 'rejected'
+  commission_rate?: number
+  total_sales?: number
+  rating?: number
+  created_at: string
+  full_name?: string
+  email?: string
 }
 
 export interface Message {
-  id: number;
-  user_id: number;
-  manager_name: string;
-  subject: string;
-  message: string;
-  priority: 'normal' | 'high' | 'urgent';
-  status: 'unread' | 'read' | 'replied';
-  sender_type: 'user' | 'agent';
-  receiver_type: 'user' | 'agent';
-  created_at: Date;
-  replied_at?: Date;
-  reply_message?: string;
+  id: number
+  user_id: string
+  manager_name: string
+  subject: string
+  message: string
+  priority: 'normal' | 'high' | 'urgent'
+  status: 'unread' | 'read' | 'replied'
+  sender_type: 'user' | 'agent'
+  receiver_type: 'user' | 'agent'
+  created_at: string
+  replied_at?: string
+  reply_message?: string
+}
+
+export interface Property {
+  id: number
+  title: string
+  description?: string
+  location: string
+  price: number
+  token_price: number
+  total_tokens: number
+  available_tokens: number
+  property_type: string
+  owner_id: string
+  image_url?: string
+  created_at: string
+  updated_at: string
+  is_active: boolean
+}
+
+export interface Investment {
+  id: number
+  property_id: number
+  user_id: string
+  tokens_purchased: number
+  total_amount: number
+  purchase_date: string
+  status: 'active' | 'sold' | 'cancelled'
+  roi_percentage?: number
+  created_at: string
+  properties?: Property
+}
+
+export interface VideoCall {
+  id: number
+  caller_id: string
+  agent_id: string
+  agent_name: string
+  caller_name: string
+  room_id: string
+  status: 'pending' | 'active' | 'rejected' | 'ended'
+  created_at: string
+  updated_at: string
+  ended_at?: string
 }
 
 export interface UserTokens {
-  id: number;
-  user_id: number;
-  token_balance: number;
-  total_purchased: number;
-  total_spent: number;
-  last_purchase_at?: Date;
-  created_at: Date;
-  updated_at: Date;
+  id: number
+  user_id: string
+  token_balance: number
+  total_purchased: number
+  total_spent: number
+  last_purchase_at?: string
+  created_at: string
+  updated_at: string
 }
 
 export interface TokenTransaction {
-  id: number;
-  user_id: number;
-  transaction_type: 'purchase' | 'spend' | 'refund';
-  token_amount: number;
-  pkr_amount: number;
-  payment_method: string;
-  payment_reference?: string;
-  status: 'pending' | 'completed' | 'failed' | 'cancelled';
-  description?: string;
-  created_at: Date;
-  completed_at?: Date;
+  id: number
+  user_id: string
+  transaction_type: 'purchase' | 'spend' | 'refund'
+  token_amount: number
+  pkr_amount: number
+  payment_method: string
+  payment_reference?: string
+  status: 'pending' | 'completed' | 'failed' | 'cancelled'
+  description?: string
+  created_at: string
+  completed_at?: string
 }
 
 export interface PaymentMethod {
-  id: number;
-  method_name: string;
-  display_name: string;
-  is_active: boolean;
-  processing_fee_percent: number;
-  min_amount: number;
-  max_amount: number;
-  created_at: Date;
+  id: number
+  method_name: string
+  display_name: string
+  is_active: boolean
+  processing_fee_percent: number
+  min_amount: number
+  max_amount: number
+  created_at: string
 }
 
-export interface UserSession {
-  id: number;
-  user_id: number;
-  session_token: string;
-  expires_at: Date;
-  created_at: Date;
-}
-
-// Database query helpers
+// Database query helpers using Supabase
 export const db = {
   // User queries
   async getUserByEmail(email: string): Promise<User | null> {
-    const [rows] = await pool.execute<any[]>(
-      'SELECT * FROM users WHERE email = ? LIMIT 1',
-      [email]
-    );
-    return rows[0] || null;
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single()
+
+    if (error) return null
+    return data
   },
 
-  async getUserById(id: number): Promise<User | null> {
-    const [rows] = await pool.execute<any[]>(
-      'SELECT * FROM users WHERE id = ? LIMIT 1',
-      [id]
-    );
-    return rows[0] || null;
+  async getUserById(id: string): Promise<User | null> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) return null
+    return data
   },
 
   async createUser(data: {
-    full_name: string;
-    email: string;
-    phone: string;
-    country: string;
-    user_type: string;
-    password_hash: string;
-    newsletter_subscribed: boolean;
-    oauth_provider?: string;
-    oauth_id?: string;
-    profile_picture_url?: string;
-    email_verified?: boolean;
-  }): Promise<number> {
-    const [result] = await pool.execute<any>(
-      `INSERT INTO users (full_name, email, phone, country, user_type, password_hash, newsletter_subscribed, 
-       oauth_provider, oauth_id, profile_picture_url, email_verified) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        data.full_name,
-        data.email,
-        data.phone,
-        data.country,
-        data.user_type,
-        data.password_hash,
-        data.newsletter_subscribed,
-        data.oauth_provider || null,
-        data.oauth_id || null,
-        data.profile_picture_url || null,
-        data.email_verified || false
-      ]
-    );
-    return result.insertId;
-  },
+    id: string
+    full_name: string
+    email: string
+    phone: string
+    country: string
+    user_type: string
+    newsletter_subscribed: boolean
+    wallet_address?: string
+  }): Promise<string> {
+    const supabase = getSupabase()
+    const { data: user, error } = await supabase
+      .from('users')
+      .insert({
+        id: data.id,
+        full_name: data.full_name,
+        email: data.email,
+        phone: data.phone,
+        country: data.country,
+        user_type: data.user_type,
+        newsletter_subscribed: data.newsletter_subscribed,
+        wallet_address: data.wallet_address || null,
+      })
+      .select()
+      .single()
 
-  // Session queries
-  async createSession(userId: number, sessionToken: string, expiresAt: Date): Promise<void> {
-    await pool.execute(
-      'INSERT INTO user_sessions (user_id, session_token, expires_at) VALUES (?, ?, ?)',
-      [userId, sessionToken, expiresAt]
-    );
-  },
-
-  async getSessionByToken(token: string): Promise<(UserSession & { user: User }) | null> {
-    const [rows] = await pool.execute<any[]>(
-      `SELECT 
-        s.id, s.user_id, s.session_token, s.expires_at, s.created_at,
-        u.id as user_id, u.full_name, u.email, u.user_type, u.is_active
-      FROM user_sessions s
-      JOIN users u ON s.user_id = u.id
-      WHERE s.session_token = ? 
-        AND s.expires_at > NOW() 
-        AND u.is_active = 1
-      LIMIT 1`,
-      [token]
-    );
-
-    if (rows.length === 0) return null;
-
-    const row = rows[0];
-    return {
-      id: row.id,
-      user_id: row.user_id,
-      session_token: row.session_token,
-      expires_at: row.expires_at,
-      created_at: row.created_at,
-      user: {
-        id: row.user_id,
-        full_name: row.full_name,
-        email: row.email,
-        user_type: row.user_type,
-        is_active: row.is_active,
-      } as User,
-    };
-  },
-
-  async deleteSession(token: string): Promise<void> {
-    await pool.execute('DELETE FROM user_sessions WHERE session_token = ?', [token]);
-  },
-
-  async deleteExpiredSessions(userId: number): Promise<void> {
-    await pool.execute('DELETE FROM user_sessions WHERE user_id = ? AND expires_at < NOW()', [userId]);
-  },
-
-  async updateSessionExpiry(token: string, expiresAt: Date): Promise<void> {
-    await pool.execute(
-      'UPDATE user_sessions SET expires_at = ? WHERE session_token = ?',
-      [expiresAt, token]
-    );
+    if (error) throw error
+    return user.id
   },
 
   // Agent queries
   async createAgent(data: {
-    user_id: number;
-    license_number: string;
-    experience: string;
-    specialization: string;
-    city: string;
-    agency?: string;
-    phone: string;
+    user_id: string
+    license_number: string
+    experience: string
+    specialization: string
+    city: string
+    agency?: string
+    phone: string
   }): Promise<void> {
-    await pool.execute(
-      'INSERT INTO agents (user_id, license_number, experience, specialization, city, agency, phone, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [data.user_id, data.license_number, data.experience, data.specialization, data.city, data.agency || null, data.phone, 'approved']
-    );
+    const supabase = getSupabase()
+    const { error } = await supabase
+      .from('agents')
+      .insert({
+        user_id: data.user_id,
+        license_number: data.license_number,
+        experience: data.experience,
+        specialization: data.specialization,
+        city: data.city,
+        agency: data.agency || null,
+        phone: data.phone,
+        status: 'approved',
+      })
+
+    if (error) throw error
   },
 
   async getAgents(): Promise<Agent[]> {
-    const [rows] = await pool.execute<any[]>(
-      `SELECT 
-        a.*,
-        u.full_name,
-        u.email
-      FROM agents a
-      JOIN users u ON a.user_id = u.id
-      WHERE a.status IN ('approved', 'pending')
-      ORDER BY a.status DESC, a.created_at DESC`
-    );
-    return rows;
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('agents')
+      .select(`
+        *,
+        users!inner (
+          full_name,
+          email
+        )
+      `)
+      .in('status', ['approved', 'pending'])
+      .order('status', { ascending: false })
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    // Flatten the nested user data
+    return data.map((agent: any) => ({
+      ...agent,
+      full_name: agent.users.full_name,
+      email: agent.users.email,
+    }))
   },
 
-  async getAgentByUserId(userId: number): Promise<Agent | null> {
-    const [rows] = await pool.execute<any[]>(
-      'SELECT * FROM agents WHERE user_id = ? LIMIT 1',
-      [userId]
-    );
-    return rows[0] || null;
+  async getAgentByUserId(userId: string): Promise<Agent | null> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('agents')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+
+    if (error) return null
+    return data
   },
 
   // Message queries
   async createMessage(data: {
-    user_id: number;
-    manager_name: string;
-    subject: string;
-    message: string;
-    priority: string;
-    sender_type: string;
-    receiver_type: string;
+    user_id: string
+    manager_name: string
+    subject: string
+    message: string
+    priority: string
+    sender_type: string
+    receiver_type: string
   }): Promise<number> {
-    const [result] = await pool.execute<any>(
-      'INSERT INTO manager_messages (user_id, manager_name, subject, message, priority, sender_type, receiver_type) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [data.user_id, data.manager_name, data.subject, data.message, data.priority, data.sender_type, data.receiver_type]
-    );
-    return result.insertId;
+    const supabase = getSupabase()
+    const { data: message, error } = await supabase
+      .from('manager_messages')
+      .insert({
+        user_id: data.user_id,
+        manager_name: data.manager_name,
+        subject: data.subject,
+        message: data.message,
+        priority: data.priority,
+        sender_type: data.sender_type,
+        receiver_type: data.receiver_type,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    return message.id
   },
 
-  async getUserMessages(userId: number): Promise<Message[]> {
-    const [rows] = await pool.execute<any[]>(
-      'SELECT * FROM manager_messages WHERE user_id = ? ORDER BY created_at DESC',
-      [userId]
-    );
-    return rows;
+  async getUserMessages(userId: string): Promise<Message[]> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('manager_messages')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data
   },
 
   async getAgentMessages(agentName: string): Promise<Message[]> {
-    const [rows] = await pool.execute<any[]>(
-      `SELECT m.*, u.full_name as user_name, u.email as user_email
-      FROM manager_messages m
-      JOIN users u ON m.user_id = u.id
-      WHERE m.manager_name = ?
-      ORDER BY m.created_at DESC`,
-      [agentName]
-    );
-    return rows;
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('manager_messages')
+      .select(`
+        *,
+        users!inner (
+          full_name,
+          email
+        )
+      `)
+      .eq('manager_name', agentName)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    // Flatten user data
+    return data.map((msg: any) => ({
+      ...msg,
+      user_name: msg.users.full_name,
+      user_email: msg.users.email,
+    }))
   },
 
   async updateMessageStatus(messageId: number, status: string): Promise<void> {
-    await pool.execute(
-      'UPDATE manager_messages SET status = ? WHERE id = ?',
-      [status, messageId]
-    );
+    const supabase = getSupabase()
+    const { error } = await supabase
+      .from('manager_messages')
+      .update({ status })
+      .eq('id', messageId)
+
+    if (error) throw error
   },
 
   async replyToMessage(messageId: number, replyMessage: string): Promise<void> {
-    await pool.execute(
-      'UPDATE manager_messages SET status = ?, reply_message = ?, replied_at = NOW() WHERE id = ?',
-      ['replied', replyMessage, messageId]
-    );
+    const supabase = getSupabase()
+    const { error } = await supabase
+      .from('manager_messages')
+      .update({
+        status: 'replied',
+        reply_message: replyMessage,
+        replied_at: new Date().toISOString(),
+      })
+      .eq('id', messageId)
+
+    if (error) throw error
+  },
+
+  async deleteMessage(messageId: number): Promise<void> {
+    const supabase = getSupabase()
+    const { error } = await supabase
+      .from('manager_messages')
+      .delete()
+      .eq('id', messageId)
+
+    if (error) throw error
   },
 
   // Token queries
-  async getUserTokens(userId: number): Promise<UserTokens | null> {
-    const [rows] = await pool.execute<any[]>(
-      'SELECT * FROM user_tokens WHERE user_id = ? LIMIT 1',
-      [userId]
-    );
-    return rows[0] || null;
+  async getUserTokens(userId: string): Promise<UserTokens | null> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('user_tokens')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+
+    if (error) return null
+    return data
   },
 
-  async createOrUpdateUserTokens(userId: number): Promise<UserTokens> {
-    const [result] = await pool.execute<any>(
-      `INSERT INTO user_tokens (user_id, token_balance, total_purchased, total_spent)
-      VALUES (?, 0, 0, 0)
-      ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP`,
-      [userId]
-    );
+  async createOrUpdateUserTokens(userId: string): Promise<UserTokens> {
+    const supabase = getSupabase()
 
-    // Fetch the record
-    const [rows] = await pool.execute<any[]>(
-      'SELECT * FROM user_tokens WHERE user_id = ? LIMIT 1',
-      [userId]
-    );
-    return rows[0];
+    // Try to get existing record
+    const existing = await this.getUserTokens(userId)
+
+    if (existing) {
+      return existing
+    }
+
+    // Create new record
+    const { data, error } = await supabase
+      .from('user_tokens')
+      .insert({
+        user_id: userId,
+        token_balance: 0,
+        total_purchased: 0,
+        total_spent: 0,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   },
 
   async createTokenTransaction(data: {
-    user_id: number;
-    transaction_type: string;
-    token_amount: number;
-    pkr_amount: number;
-    payment_method: string;
-    payment_reference?: string;
-    description?: string;
+    user_id: string
+    transaction_type: string
+    token_amount: number
+    pkr_amount: number
+    payment_method: string
+    payment_reference?: string
+    description?: string
   }): Promise<number> {
-    const [result] = await pool.execute<any>(
-      `INSERT INTO token_transactions (
-        user_id, transaction_type, token_amount, pkr_amount, 
-        payment_method, payment_reference, description, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        data.user_id,
-        data.transaction_type,
-        data.token_amount,
-        data.pkr_amount,
-        data.payment_method,
-        data.payment_reference || '',
-        data.description || '',
-        'pending'
-      ]
-    );
-    return result.insertId;
+    const supabase = getSupabase()
+    const { data: transaction, error } = await supabase
+      .from('token_transactions')
+      .insert({
+        user_id: data.user_id,
+        transaction_type: data.transaction_type,
+        token_amount: data.token_amount,
+        pkr_amount: data.pkr_amount,
+        payment_method: data.payment_method,
+        payment_reference: data.payment_reference || null,
+        description: data.description || null,
+        status: 'pending',
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    return transaction.id
   },
 
-  async updateTransactionStatus(transactionId: number, status: string, paymentReference?: string): Promise<void> {
-    if (paymentReference) {
-      await pool.execute(
-        `UPDATE token_transactions 
-        SET status = ?, 
-            completed_at = CASE WHEN ? = 'completed' THEN NOW() ELSE completed_at END,
-            payment_reference = ?
-        WHERE id = ?`,
-        [status, status, paymentReference, transactionId]
-      );
-    } else {
-      await pool.execute(
-        `UPDATE token_transactions 
-        SET status = ?, 
-            completed_at = CASE WHEN ? = 'completed' THEN NOW() ELSE completed_at END
-        WHERE id = ?`,
-        [status, status, transactionId]
-      );
+  async updateTransactionStatus(
+    transactionId: number,
+    status: string,
+    paymentReference?: string
+  ): Promise<void> {
+    const supabase = getSupabase()
+    const updateData: any = {
+      status,
+      ...(status === 'completed' && { completed_at: new Date().toISOString() }),
+      ...(paymentReference && { payment_reference: paymentReference }),
     }
+
+    const { error } = await supabase
+      .from('token_transactions')
+      .update(updateData)
+      .eq('id', transactionId)
+
+    if (error) throw error
   },
 
-  async getUserTransactions(userId: number, limit: number = 20): Promise<TokenTransaction[]> {
-    const [rows] = await pool.execute<any[]>(
-      'SELECT * FROM token_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?',
-      [userId, limit]
-    );
-    return rows;
+  async getUserTransactions(userId: string, limit: number = 20): Promise<TokenTransaction[]> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('token_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) throw error
+    return data
   },
 
   async getPaymentMethods(): Promise<PaymentMethod[]> {
-    const [rows] = await pool.execute<any[]>(
-      'SELECT * FROM payment_methods WHERE is_active = 1 ORDER BY method_name'
-    );
-    return rows;
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('payment_methods')
+      .select('*')
+      .eq('is_active', true)
+      .order('method_name')
+
+    if (error) throw error
+    return data
   },
 
   async getTransactionById(transactionId: number): Promise<TokenTransaction | null> {
-    const [rows] = await pool.execute<any[]>(
-      'SELECT * FROM token_transactions WHERE id = ? LIMIT 1',
-      [transactionId]
-    );
-    return rows[0] || null;
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('token_transactions')
+      .select('*')
+      .eq('id', transactionId)
+      .single()
+
+    if (error) return null
+    return data
   },
-};
+
+  // ============================================
+  // VIDEO CALLS FUNCTIONS
+  // ============================================
+
+  async createVideoCall(callData: {
+    caller_id: string
+    agent_id: string
+    agent_name: string
+    caller_name: string
+    room_id: string
+  }): Promise<VideoCall> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('video_calls')
+      .insert([callData])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async getAgentPendingCalls(agentId: string): Promise<VideoCall[]> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('video_calls')
+      .select('*')
+      .eq('agent_id', agentId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
+  },
+
+  async updateCallStatus(callId: number, status: string): Promise<void> {
+    const supabase = getSupabase()
+    const updates: any = {
+      status,
+      updated_at: new Date().toISOString()
+    }
+
+    if (status === 'ended') {
+      updates.ended_at = new Date().toISOString()
+    }
+
+    const { error } = await supabase
+      .from('video_calls')
+      .update(updates)
+      .eq('id', callId)
+
+    if (error) throw error
+  },
+
+  async getCallById(callId: number): Promise<VideoCall | null> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('video_calls')
+      .select('*')
+      .eq('id', callId)
+      .single()
+
+    if (error) return null
+    return data
+  },
+
+  // ============================================
+  // PROPERTIES FUNCTIONS
+  // ============================================
+
+  async getProperties(): Promise<Property[]> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
+  },
+
+  async getPropertyById(id: number): Promise<Property | null> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) return null
+    return data
+  },
+
+  async createProperty(propertyData: Omit<Property, 'id' | 'created_at' | 'updated_at'>): Promise<Property> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('properties')
+      .insert([propertyData])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async updateProperty(id: number, updates: Partial<Property>): Promise<Property> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('properties')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  // ============================================
+  // INVESTMENTS FUNCTIONS
+  // ============================================
+
+  async getUserInvestments(userId: string): Promise<Investment[]> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('investments')
+      .select(`
+        *,
+        properties (*)
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
+  },
+
+  async createInvestment(investmentData: {
+    property_id: number
+    user_id: string
+    tokens_purchased: number
+    total_amount: number
+  }): Promise<Investment> {
+    const supabase = getSupabase()
+
+    // First, update available tokens in property
+    const { data: property } = await supabase
+      .from('properties')
+      .select('available_tokens')
+      .eq('id', investmentData.property_id)
+      .single()
+
+    if (!property) throw new Error('Property not found')
+
+    const newAvailableTokens = property.available_tokens - investmentData.tokens_purchased
+    if (newAvailableTokens < 0) throw new Error('Not enough tokens available')
+
+    // Update property tokens
+    await supabase
+      .from('properties')
+      .update({ available_tokens: newAvailableTokens })
+      .eq('id', investmentData.property_id)
+
+    // Create investment
+    const { data, error } = await supabase
+      .from('investments')
+      .insert([investmentData])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async getInvestmentById(id: number): Promise<Investment | null> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('investments')
+      .select(`
+        *,
+        properties (*)
+      `)
+      .eq('id', id)
+      .single()
+
+    if (error) return null
+    return data
+  },
+
+  async getAllInvestments(): Promise<Investment[]> {
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('investments')
+      .select(`
+        *,
+        properties (*)
+      `)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
+  },
+}

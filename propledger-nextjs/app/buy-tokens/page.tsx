@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import LoadingScreen from '@/components/LoadingScreen';
+import { useWallet } from '@/context/WalletContext';
 
 interface PaymentMethod {
   id: number;
@@ -26,12 +27,14 @@ interface TokenBalance {
 
 export default function BuyTokensPage() {
   const router = useRouter();
+  const { walletAddress, connectWallet, disconnectWallet } = useWallet();
+
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
-  
+
   // Form state
   const [tokenAmount, setTokenAmount] = useState<number>(10);
   const [selectedPayment, setSelectedPayment] = useState<string>('');
@@ -46,6 +49,7 @@ export default function BuyTokensPage() {
     checkAuth();
     loadPaymentMethods();
     loadTokenBalance();
+    // Wallet connection check is now handled by Context!
   }, []);
 
   const checkAuth = async () => {
@@ -53,13 +57,13 @@ export default function BuyTokensPage() {
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
         const userData = JSON.parse(storedUser);
-        
+
         // Check if user is an agent - agents cannot buy tokens
         if (userData.user_type === 'agent' || userData.type === 'agent') {
           router.push('/agent-dashboard');
           return;
         }
-        
+
         setUser(userData);
       } else {
         router.push('/login');
@@ -77,7 +81,7 @@ export default function BuyTokensPage() {
     try {
       const response = await fetch('/api/tokens/payment-methods');
       const data = await response.json();
-      
+
       if (data.success) {
         setPaymentMethods(data.paymentMethods);
         if (data.paymentMethods.length > 0) {
@@ -93,7 +97,7 @@ export default function BuyTokensPage() {
     try {
       const response = await fetch('/api/tokens/balance');
       const data = await response.json();
-      
+
       if (data.success) {
         setTokenBalance(data.tokens);
       }
@@ -138,7 +142,7 @@ export default function BuyTokensPage() {
         setTokenAmount(10);
         setPaymentReference('');
         loadTokenBalance(); // Refresh balance
-        
+
         // Redirect to dashboard after success
         setTimeout(() => {
           router.push('/dashboard');
@@ -333,7 +337,7 @@ export default function BuyTokensPage() {
       <LoadingScreen />
       <div className="min-h-screen bg-gray-950">
         <Navbar user={user} />
-        
+
         <div className="pt-20 pb-12">
           <div className="container mx-auto px-4">
             {/* Header */}
@@ -342,7 +346,7 @@ export default function BuyTokensPage() {
                 Buy PROP Tokens
               </h1>
               <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-                Purchase PROP tokens to invest in tokenized real estate properties. 
+                Purchase PROP tokens to invest in tokenized real estate properties.
                 Each token represents PKR 1,000 worth of investment power.
               </p>
             </div>
@@ -355,7 +359,7 @@ export default function BuyTokensPage() {
                     <span className="text-2xl">🪙</span>
                     Your Token Balance
                   </h3>
-                  
+
                   {tokenBalance && (
                     <div className="space-y-4">
                       <div className="text-center">
@@ -367,7 +371,7 @@ export default function BuyTokensPage() {
                           ≈ PKR {tokenBalance.pkrValue.toLocaleString()}
                         </div>
                       </div>
-                      
+
                       <div className="border-t border-gray-600 pt-4 space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-400">Total Purchased:</span>
@@ -386,8 +390,32 @@ export default function BuyTokensPage() {
               {/* Purchase Form */}
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-2xl p-8 shadow-xl">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Purchase Tokens</h2>
-                  
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900">Purchase Tokens</h2>
+                    <button
+                      onClick={walletAddress ? disconnectWallet : connectWallet}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${walletAddress
+                        ? 'bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-700 group'
+                        : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                        }`}
+                    >
+                      <span className="text-xl">
+                        {walletAddress ? (
+                          <>
+                            <span className="group-hover:hidden">✅</span>
+                            <span className="hidden group-hover:inline">🚪</span>
+                          </>
+                        ) : '🦊'}
+                      </span>
+                      <span className="text-sm">
+                        {walletAddress
+                          ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+                          : 'Connect Wallet'
+                        }
+                      </span>
+                    </button>
+                  </div>
+
                   {/* Token Amount */}
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -407,7 +435,24 @@ export default function BuyTokensPage() {
                         PROP
                       </div>
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">
+
+                    {/* Quick Select Buttons */}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {[10, 50, 100, 500, 1000].map(amount => (
+                        <button
+                          key={amount}
+                          onClick={() => setTokenAmount(amount)}
+                          className={`px-3 py-1 text-sm rounded-full border transition-all ${tokenAmount === amount
+                            ? 'bg-teal-50 border-teal-500 text-teal-700'
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-teal-300 hover:text-teal-600'
+                            }`}
+                        >
+                          {amount}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="text-sm text-gray-500 mt-2">
                       1 PROP Token = PKR 1,000
                     </div>
                   </div>
@@ -421,11 +466,10 @@ export default function BuyTokensPage() {
                       {paymentMethods.map((method) => (
                         <label
                           key={method.id}
-                          className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                            selectedPayment === method.name
-                              ? 'border-teal-500 bg-teal-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
+                          className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedPayment === method.name
+                            ? 'border-teal-500 bg-teal-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                            }`}
                         >
                           <input
                             type="radio"
@@ -562,7 +606,7 @@ export default function BuyTokensPage() {
                     <div className="flex items-start gap-2">
                       <span className="text-blue-500 text-lg">🛡️</span>
                       <div className="text-sm text-blue-800">
-                        <strong>Secure Transaction:</strong> All payments are processed through 
+                        <strong>Secure Transaction:</strong> All payments are processed through
                         encrypted channels and recorded on the blockchain for transparency and security.
                       </div>
                     </div>

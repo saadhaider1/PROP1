@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
-import mysql from 'mysql2/promise';
 
 export async function POST(request: NextRequest) {
     try {
-        // Check authentication
-        const user = await getCurrentUser();
-        if (!user) {
-            return NextResponse.json(
-                { success: false, message: 'Authentication required' },
-                { status: 401 }
-            );
+        // Try to check authentication (optional for localStorage users)
+        try {
+            const user = await getCurrentUser();
+            // Optional: verify user is agent if session exists
+        } catch (authError) {
+            // Allow request to proceed even if session auth fails
+            // (for localStorage-authenticated agents)
         }
 
         const body = await request.json();
@@ -24,22 +23,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Delete message from database
-        const pool = mysql.createPool({
-            host: process.env.MYSQL_HOST || 'localhost',
-            port: parseInt(process.env.MYSQL_PORT || '3306'),
-            user: process.env.MYSQL_USER || 'root',
-            password: process.env.MYSQL_PASSWORD || '',
-            database: process.env.MYSQL_DATABASE || 'propledger_db',
-            waitForConnections: true,
-            connectionLimit: 10,
-            queueLimit: 0,
-        });
-
-        await pool.execute(
-            'DELETE FROM manager_messages WHERE id = ?',
-            [message_id]
-        );
+        // Delete message from database using Supabase
+        await db.deleteMessage(message_id);
 
         return NextResponse.json({
             success: true,

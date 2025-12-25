@@ -2,9 +2,16 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['localhost'],
-    unoptimized: true, // For development - allows local images without optimization
+    unoptimized: true, // Allows images without optimization for Netlify
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
   },
+  // Ensure proper output for Netlify
+  output: 'standalone',
 }
 
 module.exports = nextConfig

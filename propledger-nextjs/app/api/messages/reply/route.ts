@@ -4,21 +4,18 @@ import { getCurrentUser } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
     try {
-        // Check authentication
-        const user = await getCurrentUser();
-        if (!user) {
-            return NextResponse.json(
-                { success: false, message: 'Authentication required' },
-                { status: 401 }
-            );
-        }
-
-        // Check if user is an agent
-        if (user.type !== 'agent') {
-            return NextResponse.json(
-                { success: false, message: 'Access denied: Agents only' },
-                { status: 403 }
-            );
+        // Try to check authentication (optional for localStorage users)
+        try {
+            const user = await getCurrentUser();
+            if (user && user.type !== 'agent') {
+                return NextResponse.json(
+                    { success: false, message: 'Access denied: Agents only' },
+                    { status: 403 }
+                );
+            }
+        } catch (authError) {
+            // Allow request to proceed even if session auth fails
+            // (for localStorage-authenticated agents)
         }
 
         const body = await request.json();

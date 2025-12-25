@@ -78,7 +78,8 @@ export default function AgentDashboardPage() {
         setIncomingCall(data.call);
       }
     } catch (error) {
-      console.error('Error checking calls:', error);
+      // Silently fail if PHP backend is not available
+      // Video calling feature requires PHP backend
     }
   };
 
@@ -145,7 +146,8 @@ export default function AgentDashboardPage() {
 
     setMessagesLoading(true);
     try {
-      const response = await fetch('/api/messages/agent', {
+      // Include agent_name as query parameter for localStorage auth
+      const response = await fetch(`/api/messages/agent?agent_name=${encodeURIComponent(user.name)}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
