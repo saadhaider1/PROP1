@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createSupabaseAdminClient } from '@/lib/supabase';
+import bcrypt from 'bcryptjs';
 
 const schema = z.object({
   email: z.string().email(),
@@ -12,6 +13,8 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { email, pin, newPassword } = schema.parse(body);
+
+    console.log('Reset password request for:', email);
 
     const supabase = createSupabaseAdminClient();
 
@@ -32,30 +35,29 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // Update user password using Supabase Auth
-    const { error: updateError } = await supabase.auth.admin.updateUserById(
-      resetRecord.email, // This should be user ID, but we'll use email lookup
-      { password: newPassword }
-    );
+    console.log('PIN verified successfully');
 
-    // Alternative: Update password hash directly in users table if not using Supabase Auth
-    // For now, let's use a direct update since we're using custom auth
-    const { data: user } = await supabase
+    // Check if user exists
+    const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
       .eq('email', email)
       .single();
 
-    if (!user) {
+    if (userError || !user) {
+      console.error('User not found:', userError);
       return NextResponse.json({
         success: false,
         message: 'User not found'
       }, { status: 404 });
     }
 
-    // Hash the password (you'll need to import bcrypt)
-    const bcrypt = require('bcryptjs');
+    console.log('User found, hashing password...');
+
+    // Hash the password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    console.log('Password hashed, updating database...');
 
     // Update password in users table
     const { error: passwordError } = await supabase
@@ -67,15 +69,24 @@ export async function POST(req: Request) {
       console.error('Password update error:', passwordError);
       return NextResponse.json({
         success: false,
-        message: 'Failed to update password'
+        message: `Failed to update password: ${passwordError.message}`
       }, { status: 500 });
     }
 
+    console.log('Password updated successfully, deleting PIN...');
+
     // Delete reset token
-    await supabase
+    const { error: deleteError } = await supabase
       .from('password_resets')
       .delete()
       .eq('email', email);
+
+    if (deleteError) {
+      console.error('Error deleting PIN:', deleteError);
+      // Don't fail the request if PIN deletion fails
+    }
+
+    console.log('Password reset completed successfully!');
 
     return NextResponse.json({
       success: true,
@@ -92,7 +103,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({
       success: false,
-      message: 'Internal server error'
+      message: error instanceof Error ? error.message : 'Internal server error'
     }, { status: 500 });
   }
 }
