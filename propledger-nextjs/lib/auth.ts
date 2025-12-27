@@ -1,14 +1,14 @@
 import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
-import { db, User } from './db';
+import { User } from './db';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 );
 
 export interface SessionUser {
-  id: number;
+  id: string;
   name: string;
   email: string;
   type: string;
@@ -33,11 +33,11 @@ export function generateSessionToken(): string {
 
 // Create JWT token
 export async function createJWT(payload: SessionUser): Promise<string> {
-  return new SignJWT({ 
-    id: payload.id, 
-    name: payload.name, 
-    email: payload.email, 
-    type: payload.type 
+  return new SignJWT({
+    id: payload.id,
+    name: payload.name,
+    email: payload.email,
+    type: payload.type
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -50,7 +50,7 @@ export async function verifyJWT(token: string): Promise<SessionUser | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return {
-      id: payload.id as number,
+      id: payload.id as string,
       name: payload.name as string,
       email: payload.email as string,
       type: payload.type as string,
@@ -60,7 +60,7 @@ export async function verifyJWT(token: string): Promise<SessionUser | null> {
   }
 }
 
-// Get current user from session
+// Get current user from session (JWT-based)
 export async function getCurrentUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('propledger_session')?.value;
@@ -69,40 +69,29 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     return null;
   }
 
-  const session = await db.getSessionByToken(sessionToken);
-  
-  if (!session) {
-    return null;
-  }
-
-  // Update session expiry
-  const newExpiry = new Date();
-  newExpiry.setDate(newExpiry.getDate() + 30);
-  await db.updateSessionExpiry(sessionToken, newExpiry);
-
-  return {
-    id: session.user.id,
-    name: session.user.full_name,
-    email: session.user.email,
-    type: session.user.user_type,
-  };
+  // Verify JWT token
+  const user = await verifyJWT(sessionToken);
+  return user;
 }
 
-// Create session
+// Create session (JWT-based, stored in cookie)
 export async function createSession(user: User): Promise<string> {
-  const sessionToken = generateSessionToken();
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 30);
 
-  // Clean up old sessions
-  await db.deleteExpiredSessions(user.id);
+  // Create JWT token with user data
+  const sessionUser: SessionUser = {
+    id: user.id,
+    name: user.full_name,
+    email: user.email,
+    type: user.user_type,
+  };
 
-  // Create new session
-  await db.createSession(user.id, sessionToken, expiresAt);
+  const jwtToken = await createJWT(sessionUser);
 
-  // Set cookie
+  // Set cookie with JWT
   const cookieStore = await cookies();
-  cookieStore.set('propledger_session', sessionToken, {
+  cookieStore.set('propledger_session', jwtToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -110,24 +99,19 @@ export async function createSession(user: User): Promise<string> {
     path: '/',
   });
 
-  return sessionToken;
+  return jwtToken;
 }
 
 // Delete session
 export async function deleteSession(): Promise<void> {
   const cookieStore = await cookies();
-  const sessionToken = cookieStore.get('propledger_session')?.value;
-
-  if (sessionToken) {
-    await db.deleteSession(sessionToken);
-    cookieStore.delete('propledger_session');
-  }
+  cookieStore.delete('propledger_session');
 }
 
 // Require authentication middleware
 export async function requireAuth(): Promise<SessionUser> {
   const user = await getCurrentUser();
-  
+
   if (!user) {
     throw new Error('Authentication required');
   }
@@ -159,20 +143,12 @@ export async function verifyAuth(request: Request): Promise<{ success: boolean; 
       return { success: false, error: 'No session token found' };
     }
 
-    // Verify session in database
-    const session = await db.getSessionByToken(sessionToken);
-    
-    if (!session) {
+    // Verify JWT token
+    const user = await verifyJWT(sessionToken);
+
+    if (!user) {
       return { success: false, error: 'Invalid or expired session' };
     }
-
-    // Return user data
-    const user: SessionUser = {
-      id: session.user.id,
-      name: session.user.full_name,
-      email: session.user.email,
-      type: session.user.user_type,
-    };
 
     return { success: true, user };
   } catch (error) {
