@@ -15,7 +15,6 @@
     "bcryptjs": "^2.4.3",
     "dotenv": "^17.2.3",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.6.5",
     "next": "^14.2.0",
     "next-auth": "^4.24.0",
     "nodemailer": "^7.0.10",

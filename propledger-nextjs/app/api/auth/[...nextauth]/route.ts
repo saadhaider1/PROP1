@@ -55,23 +55,19 @@ export const authOptions: NextAuthOptions = {
             console.log('Existing user found:', existingUser.email);
             // Update OAuth info if needed
             if (!existingUser.oauth_provider || !existingUser.oauth_id) {
-              // Update user with OAuth info
-              const mysql = await import('mysql2/promise');
-              const pool = mysql.createPool({
-                host: process.env.MYSQL_HOST || 'localhost',
-                port: parseInt(process.env.MYSQL_PORT || '3306'),
-                user: process.env.MYSQL_USER || 'root',
-                password: process.env.MYSQL_PASSWORD || '',
-                database: process.env.MYSQL_DATABASE || 'propledger_db',
-                waitForConnections: true,
-                connectionLimit: 10,
-                queueLimit: 0,
-              });
+              // Update user with OAuth info using Supabase
+              const { createSupabaseAdminClient } = await import('@/lib/supabase');
+              const supabase = createSupabaseAdminClient();
 
-              await pool.execute(
-                'UPDATE users SET oauth_provider = ?, oauth_id = ?, profile_picture_url = ?, email_verified = TRUE WHERE id = ?',
-                [account.provider, account.providerAccountId, user.image, existingUser.id]
-              );
+              await supabase
+                .from('users')
+                .update({
+                  oauth_provider: account.provider,
+                  oauth_id: account.providerAccountId,
+                  profile_picture_url: user.image,
+                  email_verified: true
+                })
+                .eq('id', existingUser.id);
               console.log('Updated existing user with OAuth info');
             }
             // Store user ID and mark as existing user
