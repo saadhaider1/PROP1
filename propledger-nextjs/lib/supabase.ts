@@ -1,24 +1,30 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase client configuration
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+// Supabase client configuration - read at runtime to support SSR and build time
+const getSupabaseUrl = () => process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const getSupabaseAnonKey = () => process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const getSupabaseServiceKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
 // Client for browser usage
 export const createSupabaseClient = () => {
-    if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Missing Supabase environment variables')
+    const url = getSupabaseUrl()
+    const anonKey = getSupabaseAnonKey()
+    if (!url || !anonKey) {
+        console.error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
+        throw new Error('Missing Supabase environment variables. Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.')
     }
-    return createClient(supabaseUrl, supabaseAnonKey)
+    return createClient(url, anonKey)
 }
 
 // Admin client with service role key (for server-side operations)
 export const createSupabaseAdminClient = () => {
-    if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Missing Supabase environment variables')
+    const url = getSupabaseUrl()
+    const serviceKey = getSupabaseServiceKey()
+    if (!url || !serviceKey) {
+        console.error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+        throw new Error('Missing Supabase environment variables. Please configure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.')
     }
-    return createClient(supabaseUrl, supabaseServiceKey, {
+    return createClient(url, serviceKey, {
         auth: {
             autoRefreshToken: false,
             persistSession: false
