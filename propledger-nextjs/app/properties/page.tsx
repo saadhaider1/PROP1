@@ -36,7 +36,11 @@ export default function PropertiesPage() {
         const data = await response.json();
 
         if (data.success) {
-          setProperties(data.properties);
+          // Filter for residential and industrial types (property listings)
+          const propertyListings = data.properties.filter(
+            (prop: Property) => prop.property_type === 'residential' || prop.property_type === 'industrial'
+          );
+          setProperties(propertyListings);
         } else {
           setError(data.message || 'Failed to load properties');
         }

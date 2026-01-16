@@ -1,99 +1,78 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import PropertyCard from '@/components/PropertyCard';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Sidebar from '@/components/Sidebar';
 
+interface Property {
+  id: number;
+  title: string;
+  description?: string;
+  location: string;
+  price: number;
+  token_price: number;
+  total_tokens: number;
+  available_tokens: number;
+  property_type: string;
+  image_url?: string;
+}
+
 export default function CrowdfundingPage() {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sample crowdfunding campaigns - Replace with API call
-  const campaigns = [
-    {
-      id: '1',
-      image: '/images/property1.jpg',
-      logo: '/images/logo1.png',
-      title: 'Property Share',
-      category: 'Real Estate Ownership Made Easy',
-      location: 'Arif Habib Dolmen REIT Management Limited',
-      description: 'It is an innovative, bite-sized way to invest in high-value real estate. With Dolmen REIT, you can own a share of the most sought-after commercial properties without needing millions upfront.',
-      targetAmount: 'PKR 50,000,000',
-      raisedAmount: 'PKR 35,000,000',
-      investors: 245,
-      minInvestment: 'PKR 100,000',
+  // Fetch crowdfunding properties from API
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/properties');
+        const data = await response.json();
+
+        if (data.success) {
+          // Filter for land type (crowdfunding properties)
+          const crowdfundingProperties = data.properties.filter(
+            (prop: Property) => prop.property_type === 'land' || prop.property_type === 'mixed'
+          );
+          setProperties(crowdfundingProperties);
+        } else {
+          setError(data.message || 'Failed to load campaigns');
+        }
+      } catch (err) {
+        console.error('Error fetching campaigns:', err);
+        setError('Failed to load campaigns. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProperties();
+  }, []);
+
+  // Transform properties to campaign format
+  const campaigns = properties.map(prop => {
+    const raisedPercentage = ((prop.total_tokens - prop.available_tokens) / prop.total_tokens) * 100;
+
+    return {
+      id: prop.id.toString(),
+      image: prop.image_url || '/images/property-placeholder.jpg',
+      title: prop.title,
+      category: prop.property_type === 'land' ? 'Land Development' : 'Mixed Development',
+      location: prop.location,
+      description: prop.description || '',
+      targetAmount: `PKR ${prop.price.toLocaleString()}`,
+      raisedAmount: `PKR ${Math.round(prop.price * raisedPercentage / 100).toLocaleString()}`,
+      investors: Math.floor(((prop.total_tokens - prop.available_tokens) / 10) + 50),
+      minInvestment: `PKR ${prop.token_price.toLocaleString()}`,
       type: 'crowdfunding' as const
-    },
-    {
-      id: '2',
-      image: '/images/property2.jpg',
-      logo: '/images/logo2.png',
-      title: 'Serene Heights Hotel & Resort',
-      category: 'Hospitality',
-      location: 'Nathia Gali, Khyber Pakhtunkhwa',
-      description: 'Serene Heights in Nathia Gali is a luxury hotel and resort spanning 2.5 acres with 50 rooms, a spa, restaurant, and conference facilities. Located in a prime tourist destination.',
-      targetAmount: 'PKR 80,000,000',
-      raisedAmount: 'PKR 62,000,000',
-      investors: 412,
-      minInvestment: 'PKR 150,000',
-      type: 'crowdfunding' as const
-    },
-    {
-      id: '3',
-      image: '/images/property3.jpg',
-      title: 'Green Valley Apartments',
-      category: 'Residential Complex',
-      location: 'Bahria Town, Islamabad',
-      description: 'Modern apartment complex with eco-friendly design, solar panels, and smart home technology. Features include gym, swimming pool, and community center.',
-      targetAmount: 'PKR 30,000,000',
-      raisedAmount: 'PKR 18,000,000',
-      investors: 156,
-      minInvestment: 'PKR 75,000',
-      type: 'crowdfunding' as const
-    },
-    {
-      id: '4',
-      image: '/images/property4.jpg',
-      title: 'Tech Hub Commercial Plaza',
-      category: 'Commercial Development',
-      location: 'I-9 Markaz, Islamabad',
-      description: 'State-of-the-art commercial plaza designed for tech startups and IT companies. Features high-speed internet, modern workspaces, and parking facilities.',
-      targetAmount: 'PKR 65,000,000',
-      raisedAmount: 'PKR 45,000,000',
-      investors: 328,
-      minInvestment: 'PKR 200,000',
-      type: 'crowdfunding' as const
-    },
-    {
-      id: '5',
-      image: '/images/property5.jpg',
-      title: 'Luxury Villas Project',
-      category: 'Premium Housing',
-      location: 'DHA Phase 6, Lahore',
-      description: 'Exclusive luxury villas with private gardens, swimming pools, and modern architecture. Each villa features 5 bedrooms, home automation, and premium finishes.',
-      targetAmount: 'PKR 120,000,000',
-      raisedAmount: 'PKR 95,000,000',
-      investors: 567,
-      minInvestment: 'PKR 500,000',
-      type: 'crowdfunding' as const
-    },
-    {
-      id: '6',
-      image: '/images/property6.jpg',
-      title: 'Shopping Mall Development',
-      category: 'Retail Complex',
-      location: 'Gulberg, Karachi',
-      description: 'Multi-story shopping mall with international brands, food court, cinema, and entertainment zone. Strategic location with high foot traffic.',
-      targetAmount: 'PKR 100,000,000',
-      raisedAmount: 'PKR 72,000,000',
-      investors: 489,
-      minInvestment: 'PKR 250,000',
-      type: 'crowdfunding' as const
-    }
-  ];
+    };
+  });
 
   const filteredCampaigns = campaigns.filter(campaign => {
     const matchesSearch = campaign.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -217,20 +196,47 @@ export default function CrowdfundingPage() {
           </div>
         </div>
 
-        {/* Campaigns Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredCampaigns.map((campaign) => (
-            <PropertyCard key={campaign.id} {...campaign} />
-          ))}
-        </div>
-
-        {/* No Results */}
-        {filteredCampaigns.length === 0 && (
-          <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
-            <div className="text-6xl mb-4 text-gray-200">🔍</div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">No campaigns found</h3>
-            <p className="text-gray-500">Try changing your filters to see more results.</p>
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-20">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-gray-600">Loading campaigns...</p>
           </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="text-center py-20 bg-red-50 rounded-3xl border border-red-100">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Error Loading Campaigns</h3>
+            <p className="text-gray-600">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Campaigns Grid */}
+        {!loading && !error && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredCampaigns.map((campaign) => (
+                <PropertyCard key={campaign.id} {...campaign} />
+              ))}
+            </div>
+
+            {/* No Results */}
+            {filteredCampaigns.length === 0 && (
+              <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
+                <div className="text-6xl mb-4 text-gray-200">🔍</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No campaigns found</h3>
+                <p className="text-gray-500">Try changing your filters to see more results.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
       <Footer />

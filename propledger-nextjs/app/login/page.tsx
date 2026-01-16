@@ -8,7 +8,7 @@ import Navbar from '@/components/Navbar';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [loginType, setLoginType] = useState<'user' | 'agent'>('user');
+  const [loginType, setLoginType] = useState<'user' | 'agent' | 'admin'>('user');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -37,8 +37,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // Use different API route for admin login
+      const endpoint = loginType === 'admin' ? '/api/auth/admin-login' : '/api/auth/login';
+
       // Use Next.js API route for authentication
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -65,7 +68,10 @@ export default function LoginPage() {
             router.push(data.redirect);
           } else {
             // Fallback
-            if (loginType === 'agent') {
+            if (loginType === 'admin') {
+              localStorage.setItem('admin_token', 'logged_in');
+              router.push('/admin/dashboard');
+            } else if (loginType === 'agent') {
               router.push('/agent-dashboard');
             } else {
               router.push('/dashboard');
@@ -109,20 +115,20 @@ export default function LoginPage() {
             {/* Header */}
             <div className="text-center mb-8">
               <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                {loginType === 'user' ? 'User Login' : 'Agent Login'}
+                {loginType === 'user' ? 'User Login' : loginType === 'agent' ? 'Agent Login' : 'Admin Login'}
               </h1>
               <p className="text-gray-600">Please enter your details</p>
             </div>
 
             {/* Login Type Selection */}
             <div className="mb-6">
-              <div className="flex gap-3 bg-gray-100 p-1 rounded-xl">
+              <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
                 <button
                   type="button"
                   onClick={() => setLoginType('user')}
-                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${loginType === 'user'
-                      ? 'bg-white text-gray-900 shadow-md'
-                      : 'text-gray-600 hover:text-gray-900'
+                  className={`flex-1 py-3 px-3 rounded-lg font-medium transition-all text-sm ${loginType === 'user'
+                    ? 'bg-white text-gray-900 shadow-md'
+                    : 'text-gray-600 hover:text-gray-900'
                     }`}
                 >
                   👤 User
@@ -130,12 +136,22 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setLoginType('agent')}
-                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${loginType === 'agent'
-                      ? 'bg-white text-gray-900 shadow-md'
-                      : 'text-gray-600 hover:text-gray-900'
+                  className={`flex-1 py-3 px-3 rounded-lg font-medium transition-all text-sm ${loginType === 'agent'
+                    ? 'bg-white text-gray-900 shadow-md'
+                    : 'text-gray-600 hover:text-gray-900'
                     }`}
                 >
                   🏢 Agent
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginType('admin')}
+                  className={`flex-1 py-3 px-3 rounded-lg font-medium transition-all text-sm ${loginType === 'admin'
+                    ? 'bg-white text-gray-900 shadow-md'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  🛡️ Admin
                 </button>
               </div>
             </div>

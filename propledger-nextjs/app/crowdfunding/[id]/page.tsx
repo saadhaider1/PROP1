@@ -235,31 +235,28 @@ export default function CrowdfundingDetailPage() {
                 <div className="flex">
                   <button
                     onClick={() => setActiveTab('overview')}
-                    className={`px-6 py-4 font-semibold ${
-                      activeTab === 'overview'
+                    className={`px-6 py-4 font-semibold ${activeTab === 'overview'
                         ? 'text-green-600 border-b-2 border-green-600'
                         : 'text-gray-600 hover:text-green-600'
-                    }`}
+                      }`}
                   >
                     Overview
                   </button>
                   <button
                     onClick={() => setActiveTab('updates')}
-                    className={`px-6 py-4 font-semibold ${
-                      activeTab === 'updates'
+                    className={`px-6 py-4 font-semibold ${activeTab === 'updates'
                         ? 'text-green-600 border-b-2 border-green-600'
                         : 'text-gray-600 hover:text-green-600'
-                    }`}
+                      }`}
                   >
                     Updates
                   </button>
                   <button
                     onClick={() => setActiveTab('documents')}
-                    className={`px-6 py-4 font-semibold ${
-                      activeTab === 'documents'
+                    className={`px-6 py-4 font-semibold ${activeTab === 'documents'
                         ? 'text-green-600 border-b-2 border-green-600'
                         : 'text-gray-600 hover:text-green-600'
-                    }`}
+                      }`}
                   >
                     Documents
                   </button>
@@ -305,21 +302,33 @@ export default function CrowdfundingDetailPage() {
                 {activeTab === 'documents' && (
                   <div>
                     <h2 className="text-2xl font-bold mb-4">Campaign Documents</h2>
-                    <div className="space-y-3">
-                      {campaign.documents.map((doc, index) => (
-                        <a
-                          key={index}
-                          href={doc.url}
-                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="text-2xl">📄</span>
-                            <span className="font-semibold text-gray-700">{doc.name}</span>
-                          </div>
-                          <span className="text-green-600">Download →</span>
-                        </a>
-                      ))}
-                    </div>
+                    {campaign.documents && campaign.documents.length > 0 ? (
+                      <div className="space-y-3">
+                        {campaign.documents.map((doc, index) => (
+                          <a
+                            key={index}
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">📄</span>
+                              <span className="font-semibold text-gray-700">{doc.name}</span>
+                            </div>
+                            <span className="text-green-600">Download →</span>
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 bg-gray-50 rounded-lg">
+                        <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <h3 className="text-lg font-semibold text-gray-600 mb-2">No Documents Found</h3>
+                        <p className="text-gray-500">Documents for this campaign will be available soon.</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

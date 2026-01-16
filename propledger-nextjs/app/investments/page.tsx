@@ -36,7 +36,11 @@ export default function InvestmentsPage() {
         const data = await response.json();
 
         if (data.success) {
-          setProperties(data.properties);
+          // Filter for commercial and mixed types (investment opportunities)
+          const investmentProperties = data.properties.filter(
+            (prop: Property) => prop.property_type === 'commercial' || prop.property_type === 'mixed'
+          );
+          setProperties(investmentProperties);
         } else {
           setError(data.message || 'Failed to load investment opportunities');
         }
@@ -53,9 +57,6 @@ export default function InvestmentsPage() {
 
   // Transform properties to investment format
   const investments = properties.map(prop => {
-    const availablePercentage = (prop.available_tokens / prop.total_tokens) * 100;
-    const estimatedReturns = availablePercentage > 50 ? '12-15%' : '15-18%';
-
     return {
       id: prop.id.toString(),
       image: prop.image_url || '/images/property-placeholder.jpg',
@@ -63,9 +64,9 @@ export default function InvestmentsPage() {
       category: prop.property_type,
       location: prop.location,
       description: prop.description || '',
-      returns: estimatedReturns,
-      duration: '3-5 Years',
-      minInvestment: `PKR ${prop.token_price.toLocaleString()}`,
+      returns: (prop as any).returns || '12-15%',
+      duration: (prop as any).duration || '3-5 Years',
+      minInvestment: `PKR ${((prop as any).min_investment || prop.token_price).toLocaleString()}`,
       type: 'investment' as const,
       fullDescription: prop.description || ''
     };
