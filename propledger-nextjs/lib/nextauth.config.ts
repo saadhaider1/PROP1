@@ -141,3 +141,8 @@ export const authOptions: NextAuthOptions = {
     debug: process.env.NODE_ENV === 'development',
     useSecureCookies: process.env.NODE_ENV === 'production',
 };
+
+// Export function to avoid Next.js Route export issues
+export function getAuthOptions() {
+    return authOptions;
+}
