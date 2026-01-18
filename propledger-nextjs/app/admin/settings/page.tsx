@@ -14,7 +14,7 @@ export default function AdminSettings() {
             <AdminSidebar />
 
             <div className="flex-1 ml-64">
-                <AdminHeader />
+                <AdminHeader title="Settings" />
 
                 <main className="p-8">
                     <div className="max-w-5xl mx-auto">
