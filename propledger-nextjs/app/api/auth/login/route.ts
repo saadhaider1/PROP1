@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { createSupabaseAdminClient, createSupabaseClient } from '@/lib/supabase';
 import { createSession } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 const loginSchema = z.object({
     email: z.string().email(),
     password: z.string().min(1),
