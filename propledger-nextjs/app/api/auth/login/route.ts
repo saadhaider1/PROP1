@@ -84,7 +84,11 @@ export async function POST(req: Request) {
                 console.log('Agent not approved:', email, 'status:', agent.status);
                 return NextResponse.json({
                     success: false,
-                    message: `Your agent account is ${agent.status}. Please contact support.`
+                    message: agent.status === 'pending'
+                        ? 'Your agent account is pending admin approval. Please wait for approval before logging in.'
+                        : agent.status === 'rejected'
+                            ? 'Your agent account has been rejected. Please contact support for more information.'
+                            : `Your agent account status is ${agent.status}. Please contact support.`
                 }, { status: 401 });
             }
 

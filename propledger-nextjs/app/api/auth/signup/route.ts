@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         city: city || 'Unknown',
         agency: agency || null,
         phone,
-        status: 'approved',
+        status: 'pending', // Requires admin approval
       })
 
       if (agentError) {
@@ -117,7 +117,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Account created successfully! Please login.',
+      message: userType === 'agent'
+        ? 'Account created successfully! Your agent registration is pending admin approval. You will be notified once approved.'
+        : 'Account created successfully! Please login.',
       user: {
         id: authData.user.id,
         email,

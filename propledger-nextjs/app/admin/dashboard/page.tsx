@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import AdminPropertiesSection from '@/components/admin/AdminPropertiesSection';
+import AgentApprovalModal from '@/components/admin/AgentApprovalModal';
 
 interface Stats {
     total_users: number;
@@ -80,6 +81,10 @@ export default function AdminDashboard() {
     const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'agents' | 'properties' | 'transactions'>('overview');
+    const [darkMode, setDarkMode] = useState(false);
+    const [pendingAgents, setPendingAgents] = useState<Agent[]>([]);
+    const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+    const [showApprovalModal, setShowApprovalModal] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -122,6 +127,9 @@ export default function AdminDashboard() {
             const data = await response.json();
             if (data.success) {
                 setAgents(data.agents);
+                // Filter pending agents
+                const pending = data.agents.filter((agent: Agent) => agent.status === 'pending');
+                setPendingAgents(pending);
             }
         } catch (error) {
             console.error('Agents fetch error:', error);
@@ -172,6 +180,28 @@ export default function AdminDashboard() {
             currency: 'PKR',
             minimumFractionDigits: 0
         }).format(amount);
+    };
+
+    const handleApproveAgentsClick = () => {
+        if (pendingAgents.length > 0) {
+            setSelectedAgent(pendingAgents[0]);
+            setShowApprovalModal(true);
+        }
+    };
+
+    const handleApprovalSuccess = () => {
+        // Refresh agents data
+        fetchAgents();
+        fetchStats();
+
+        // Show next pending agent or close modal
+        const nextPendingAgent = pendingAgents.find(agent => agent.id !== selectedAgent?.id && agent.status === 'pending');
+        if (nextPendingAgent) {
+            setSelectedAgent(nextPendingAgent);
+        } else {
+            setShowApprovalModal(false);
+            setSelectedAgent(null);
+        }
     };
 
     if (loading) {
@@ -492,11 +522,21 @@ export default function AdminDashboard() {
                                                 </svg>
                                                 <span className="font-medium">Add New Property</span>
                                             </button>
-                                            <button className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                                                </svg>
-                                                <span className="font-medium">Approve Agents</span>
+                                            <button
+                                                onClick={handleApproveAgentsClick}
+                                                className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors relative"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                                    </svg>
+                                                    <span className="font-medium">Approve Agents</span>
+                                                </div>
+                                                {pendingAgents.length > 0 && (
+                                                    <span className="flex items-center justify-center w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">
+                                                        {pendingAgents.length}
+                                                    </span>
+                                                )}
                                             </button>
                                             <button className="w-full flex items-center gap-3 px-4 py-3 bg-purple-50 text-purple-700 rounded-xl hover:bg-purple-100 transition-colors">
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -549,6 +589,19 @@ export default function AdminDashboard() {
                     )}
                 </main>
             </div>
+
+            {/* Agent Approval Modal */}
+            {selectedAgent && (
+                <AgentApprovalModal
+                    agent={selectedAgent}
+                    isOpen={showApprovalModal}
+                    onClose={() => {
+                        setShowApprovalModal(false);
+                        setSelectedAgent(null);
+                    }}
+                    onSuccess={handleApprovalSuccess}
+                />
+            )}
         </div>
     );
 }
