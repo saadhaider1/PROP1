@@ -8,6 +8,7 @@ import AdminPropertiesSection from '@/components/admin/AdminPropertiesSection';
 import AgentApprovalModal from '@/components/admin/AgentApprovalModal';
 import AdminInvestmentsSection from '@/components/admin/AdminInvestmentsSection';
 import AdminCrowdfundingSection from '@/components/admin/AdminCrowdfundingSection';
+import AdminWalletSection from '@/components/admin/AdminWalletSection';
 
 interface Stats {
     total_users: number;
@@ -82,7 +83,7 @@ export default function AdminDashboard() {
     const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
     const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'agents' | 'properties' | 'transactions' | 'investments' | 'crowdfunding'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'agents' | 'properties' | 'transactions' | 'investments' | 'crowdfunding' | 'wallet'>('overview');
     const [investmentNotifCount, setInvestmentNotifCount] = useState(0);
     const [crowdfundingNotifCount, setCrowdfundingNotifCount] = useState(0);
     const [darkMode, setDarkMode] = useState(false);
@@ -94,7 +95,7 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         const tab = searchParams.get('tab');
-        if (tab && ['overview', 'users', 'agents', 'properties', 'transactions', 'investments', 'crowdfunding'].includes(tab)) {
+        if (tab && ['overview', 'users', 'agents', 'properties', 'transactions', 'investments', 'crowdfunding', 'wallet'].includes(tab)) {
             setActiveTab(tab as typeof activeTab);
         }
     }, [searchParams]);
@@ -330,6 +331,7 @@ export default function AdminDashboard() {
                             { key: 'properties', label: 'Properties', icon: '🏠' },
                             { key: 'investments', label: 'Investments', icon: '💰', badge: investmentNotifCount },
                             { key: 'crowdfunding', label: 'Crowdfunding', icon: '🧩', badge: crowdfundingNotifCount },
+                            { key: 'wallet', label: 'Admin Wallet', icon: '💳' },
                         ].map(tab => (
                             <button
                                 key={tab.key}
@@ -363,6 +365,11 @@ export default function AdminDashboard() {
                     {/* Crowdfunding Section */}
                     {activeTab === 'crowdfunding' && (
                         <AdminCrowdfundingSection />
+                    )}
+
+                    {/* Admin Wallet Section */}
+                    {activeTab === 'wallet' && (
+                        <AdminWalletSection />
                     )}
 
                     {/* Overview / Users / Agents / Transactions */}
